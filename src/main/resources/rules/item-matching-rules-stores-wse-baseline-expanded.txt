@@ -1,0 +1,130 @@
+//------------- RULESET DEFAULTS -----------------------------------------------------------
+// RULESET_ATTRIBUTES lists the meta information that you want to use for the entire ruleset. 
+CREATE	DEFAULT_RULESET_ATTRIBUTES AS		
+	COMPARER     					= EXACT;
+	SOURCE_TOKENIZER  				= STANDARD_ANALYZER;
+	TARGET_TOKENIZER 				= STANDARD_ANALYZER;
+	MISSING_ATTRIBUTE_ALLOWED 		= FALSE;
+	SCORE        					= 1.0;
+END
+
+//------------- RULES ----------------------------------------------------------------------
+/**
+ * Two items match if they have the same UPC, same part number and similar title names. A part number
+ * match along with UPC match is a strong rule. Just to avoid false positive, a title similarity
+ * with reasonable score threshold has also been added as a check.
+ */
+CREATE RULE upc_part_number_rule AS
+	MATCH [req_upc_10 OR req_upc_11 OR req_upc_12 OR req_upc_13 OR req_upc_14 OR upc] 
+		IN [req_upc_10,req_upc_11,req_upc_12,req_upc_13,req_upc_14, upc, upc_nbr,case_upc_nbr,whpk_upc_nbr,pd_title] 
+		USING COMPARER=EXACT AND SOURCE_TOKENIZER=NONE AND SCORE=1.0;
+	MATCH [req_part_number OR req_raw_part_number] 
+		IN [req_part_number, req_raw_part_number, vendor_stock_id,req_upc_10,req_upc_11,req_upc_12,req_upc_13, req_upc_14, customer_item_nbr, case_upc_nbr] 
+		USING COMPARER=EXACT_VALUE AND SOURCE_TOKENIZER=NONE AND SCORE=1.0;
+	MATCH [pd_title] IN [ALL_ITEMPAIR_ATTRIBUTES] 
+		USING  COMPARER=FUZZY AND SOURCE_TOKENIZER=STANDARD_ANALYZER AND SCORE=0.80;		
+END
+
+/**
+ * Two items with same UPC, same title and same color should be similar.
+ */
+CREATE RULE upc_strict_title_color_rule AS
+	MATCH [req_upc_10 OR req_upc_11 OR req_upc_12 OR req_upc_13 OR req_upc_14 OR upc ] 
+		IN [req_upc_10,req_upc_11,req_upc_12,req_upc_13,req_upc_14, upc, upc_nbr,case_upc_nbr,whpk_upc_nbr,pd_title] 
+		USING COMPARER=EXACT AND SOURCE_TOKENIZER=NONE AND SCORE=1.0;
+	MATCH [pd_title] IN [ALL_ITEMPAIR_ATTRIBUTES] 
+		USING COMPARER=FUZZY AND SOURCE_TOKENIZER=STANDARD_ANALYZER AND SCORE=0.95;
+	MATCH [req_color OR extracted_color] IN [req_color, extracted_color, req_description, signing_desc, static_color, Color, Primary Color] 
+		USING COMPARER=FUZZY AND SOURCE_TOKENIZER=STANDARD_ANALYZER AND SCORE=0.95;				
+END			
+
+/**
+ * If above rule failed it suggests that title representation is slightly different among the two
+ * data sources. So, reduce the expected score for title a bit and try to match other extended
+ * attributes like category, color, brand etc.
+ */  
+CREATE RULE upc_relaxed_title_brand_category_color_rule_1 AS
+	MATCH [req_upc_10 OR req_upc_11 OR req_upc_12 OR req_upc_13 OR req_upc_14 OR upc] 
+		IN [req_upc_10,req_upc_11,req_upc_12,req_upc_13,req_upc_14, upc, upc_nbr,case_upc_nbr,whpk_upc_nbr,pd_title] 
+		USING COMPARER=EXACT AND SOURCE_TOKENIZER=NONE AND SCORE=1.0;
+	MATCH [req_category] 
+		IN [upc_desc, dept_desc, req_category, mdse_catg_desc, signing_desc, dept_subcatg_desc, req_description, dept_catg_grp_desc, mdse_subcatg_desc, dept_category_desc, fineline_desc]
+		USING COMPARER=FUZZY AND SOURCE_TOKENIZER=STANDARD_ANALYZER AND SCORE=0.95;
+	MATCH [req_brand_name] IN [ALL_ITEMPAIR_ATTRIBUTES] 
+		USING COMPARER=FUZZY AND SOURCE_TOKENIZER=STANDARD_ANALYZER AND SCORE=0.95;
+	BIDIRECTIONAL MATCH [req_color OR extracted_color] IN [req_color, extracted_color, req_description, signing_desc, static_color, Color, Primary Color] 
+		USING COMPARER=FUZZY AND SOURCE_TOKENIZER=STANDARD_ANALYZER AND MISSING_ATTRIBUTE_ALLOWED=TRUE AND SCORE=0.80;
+	MATCH [pd_title] IN [ALL_ITEMPAIR_ATTRIBUTES] 
+		USING COMPARER=FUZZY AND SOURCE_TOKENIZER=STANDARD_ANALYZER AND SCORE=0.85;					
+END
+
+/**
+ * Above rule for cases when the brand name might not be present there at all.
+ */
+CREATE RULE upc_relaxed_title_brand_category_color_rule_2 AS
+	MATCH [req_upc_10 OR req_upc_11 OR req_upc_12 OR req_upc_13 OR req_upc_14 OR upc] 
+		IN [req_upc_10,req_upc_11,req_upc_12,req_upc_13,req_upc_14, upc, upc_nbr,case_upc_nbr,whpk_upc_nbr,pd_title] 
+		USING COMPARER=EXACT AND SOURCE_TOKENIZER=NONE AND SCORE=1.0;
+	MATCH [req_category] 
+		IN [upc_desc, dept_desc, req_category, mdse_catg_desc, signing_desc, dept_subcatg_desc, req_description, dept_catg_grp_desc, mdse_subcatg_desc, dept_category_desc, fineline_desc]
+		USING COMPARER=FUZZY AND SOURCE_TOKENIZER=STANDARD_ANALYZER AND SCORE=0.95;
+	BIDIRECTIONAL MATCH [req_brand_name] IN [ALL_ITEMPAIR_ATTRIBUTES] 
+		USING COMPARER=FUZZY AND SOURCE_TOKENIZER=STANDARD_ANALYZER AND MISSING_ATTRIBUTE_ALLOWED=TRUE AND SCORE=0.80;
+	BIDIRECTIONAL MATCH [req_color OR extracted_color] IN [req_color, extracted_color, req_description, signing_desc, static_color, Color, Primary Color] 
+		USING COMPARER=FUZZY AND SOURCE_TOKENIZER=STANDARD_ANALYZER AND MISSING_ATTRIBUTE_ALLOWED=TRUE AND SCORE=0.80;
+	MATCH [pd_title] IN [ALL_ITEMPAIR_ATTRIBUTES] 
+		USING COMPARER=FUZZY AND SOURCE_TOKENIZER=STANDARD_ANALYZER AND SCORE=0.85;					
+END
+
+/**
+ * Add a rule for books too. UPC, ISBN, Title should definitely match. If binding is present it 
+ * should match too.
+ */
+CREATE RULE upc_isbn_title_binding_rule AS
+	MATCH [req_upc_10 OR req_upc_11 OR req_upc_12 OR req_upc_13 OR req_upc_14 OR upc] 
+		IN [req_upc_10,req_upc_11,req_upc_12,req_upc_13,req_upc_14, upc, upc_nbr,case_upc_nbr,whpk_upc_nbr,pd_title] 
+		USING COMPARER=EXACT AND SOURCE_TOKENIZER=NONE AND SCORE=1.0;
+	MATCH [isbn OR isbn10 OR req_isbn_13] IN [isbn, isbn10, req_isbn_13, pd_title, req_description]
+		USING COMPARER=EXACT_VALUE AND SOURCE_TOKENIZER=STANDARD_ANALYZER AND SCORE=1.0;
+	MATCH [pd_title] IN [ALL_ITEMPAIR_ATTRIBUTES]
+		USING COMPARER=FUZZY AND SOURCE_TOKENIZER=STANDARD_ANALYZER AND SCORE=0.85;
+	MATCH [req_binding OR normalized_binding] IN [req_binding, normalized_binding, req_description, signing_desc]
+		USING COMPARER=EXACT AND MISSING_ATTRIBUTE_ALLOWED=TRUE AND SOURCE_TOKENIZER=STANDARD_ANALYZER AND SCORE=0.95;		
+END
+
+/**
+ * Two items with same UPC, title and quantity should be similar.
+ */
+CREATE RULE upc_title_number_units_rule AS
+	MATCH [req_upc_10 OR req_upc_11 OR req_upc_12 OR req_upc_13 OR req_upc_14] 
+		IN [req_upc_10,req_upc_11,req_upc_12,req_upc_13,req_upc_14, upc, upc_nbr,case_upc_nbr,whpk_upc_nbr,pd_title] 
+		USING COMPARER=EXACT AND SOURCE_TOKENIZER=NONE AND SCORE=1.0;
+	MATCH [pd_title_number_units] IN [pd_title_number_units, sell_qty, size_desc] 
+		USING COMPARER=EXACT_VALUE AND SOURCE_TOKENIZER=STANDARD_ANALYZER AND SCORE=1.0;
+	MATCH [pd_title] IN [ALL_ITEMPAIR_ATTRIBUTES] 
+		USING COMPARER=FUZZY AND SOURCE_TOKENIZER=STANDARD_ANALYZER AND SCORE=0.85;	
+END
+
+/**
+ * Two items with same UPC, title and variation phrases (color, size etc.) should be similar.
+ */
+CREATE RULE upc_title_variation_phrases_rule AS
+	MATCH [req_upc_10 OR req_upc_11 OR req_upc_12 OR req_upc_13 OR req_upc_14] 
+		IN [req_upc_10,req_upc_11,req_upc_12,req_upc_13,req_upc_14, upc, upc_nbr,case_upc_nbr,whpk_upc_nbr,pd_title] 
+		USING COMPARER=EXACT AND SOURCE_TOKENIZER=NONE AND SCORE=1.0;
+	MATCH [pd_title_variation_phrases] IN [pd_title_variation_phrases] 
+		USING COMPARER=EXACT AND SOURCE_TOKENIZER=SEPARATOR_TOKENIZER AND SCORE=1.0;
+	MATCH [pd_title] IN [ALL_ITEMPAIR_ATTRIBUTES] 
+		USING COMPARER=FUZZY AND SOURCE_TOKENIZER=STANDARD_ANALYZER AND SCORE=0.85;	
+END
+
+//-------------- RULESET ----------------------------------------------------------------- 
+CREATE RULESET wse_stores_matching_rules AS
+	INCLUDE RULE upc_part_number_rule;
+	INCLUDE RULE upc_strict_title_color_rule;
+	INCLUDE RULE upc_relaxed_title_brand_category_color_rule_1;	
+	INCLUDE RULE upc_relaxed_title_brand_category_color_rule_2;
+	INCLUDE RULE upc_isbn_title_binding_rule;
+	INCLUDE RULE upc_title_number_units_rule;
+	INCLUDE RULE upc_title_variation_phrases_rule;	
+END		

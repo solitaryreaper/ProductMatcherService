@@ -1,0 +1,44 @@
+ID|#21618546|#S9884426|#
+Source|#WALMART_SEARCH_EXTRACT|#CNET|#
+Title|#Garmin nuvi 50 Suction Cup Mount|#Garmin - GPS reciever suction cup mount - for n�vi 50, 50LM|#
+pd_title|#[Garmin nuvi 50 Suction Cup Mount]|#[Garmin - GPS reciever suction cup mount - for n�vi 50, 50LM]|#
+pd_title_without_number_units_and_variations|#[Garmin nuvi 50 Suction Cup Mount]|#[Garmin - GPS reciever suction cup mount - for n�vi 50, 50LM]|#
+req_brand_name|#[Garmin]|#null|#
+req_manufacturer|#null|#[Garmin]|#
+req_description|#[<li>Mounts on any smooth flat surface<li>Keep your GPS device close]|#[Garmin GPS reciever suction cup mount]|#
+req_category|#[GPS Stands, GPS]|#[GPS reciever suction cup mount]|#
+req_upc_10|#[7537599797]|#null|#
+req_upc_11|#[75375997977, 07537599797]|#[75375997977, 77778610623]|#
+req_upc_12|#[075375997977, 753759979775]|#[753759979775, 777786106232]|#
+req_upc_13|#[0753759979775, 0075375997977]|#[0753759979775, 0777786106232]|#
+req_upc_14|#[00075375997977, 00753759979775]|#[00753759979775, 00777786106232]|#
+req_part_number|#[0101176502]|#[0101176502]|#
+req_raw_part_number|#[010-11765-02]|#[010-11765-02]|#
+CNET Compatibility Information#Designed For|#null|#[Garmin n�vi 50, 50LM]|#
+CNET Header / Packaged Quantity|#null|#[1]|#
+CNET Header / Manufacturer|#null|#[Garmin]|#
+CNET ManufacturerPartNumber|#null|#[010-11765-02]|#
+CNET Product Description|#null|#[Garmin GPS reciever suction cup mount]|#
+CNET Miscellaneous / Compatible Mobile Devices|#null|#[Garmin n�vi 50, Garmin n�vi 50LM]|#
+CNET Header / Product Line|#null|#[Garmin]|#
+CNET General#Product Type|#null|#[GPS reciever suction cup mount]|#
+CNET Product Type|#null|#[GPS reciever suction cup mount]|#
+CNET Manufacturer|#null|#[Garmin]|#
+CNET Designed For|#null|#[N�vi 50, 50LM]|#
+CNET Miscellaneous / CE Product Type|#null|#[GPS reciever suction cup mount]|#
+CNET Miscellaneous#Placing / Mounting|#null|#[Windshield, dashboard]|#
+CNET UPC|#null|#[0753759979775, 0777786106232]|#
+WALMART_SEARCH_EXTRACT |#[\N]|#null|#
+WALMART_SEARCH_EXTRACT Finer Categorizations|#[GPS Stands]|#null|#
+WALMART_SEARCH_EXTRACT Has Paper Wood|#[No]|#null|#
+WALMART_SEARCH_EXTRACT shelf_description|#[<li>Mounts on any smooth flat surface<li>Keep your GPS device close]|#null|#
+WALMART_SEARCH_EXTRACT walmart_canonical_url|#[/ip/Garmin-nuvi-50-Suction-Cup-Mount/21618546]|#null|#
+WALMART_SEARCH_EXTRACT Wercs Status|#[Completed]|#null|#
+WALMART_SEARCH_EXTRACT upc|#[0075375997977]|#null|#
+WALMART_SEARCH_EXTRACT display_group_name|#[GPS]|#null|#
+WALMART_SEARCH_EXTRACT title|#[Garmin nuvi 50 Suction Cup Mount]|#null|#
+WALMART_SEARCH_EXTRACT model_num|#[010-11765-02]|#null|#
+WALMART_SEARCH_EXTRACT standard_upc|#[00753759979775]|#null|#
+WALMART_SEARCH_EXTRACT brand|#[Garmin]|#null|#
+WALMART_SEARCH_EXTRACT Battery Type|#[Does Not Contain a Battery]|#null|#
+WALMART_SEARCH_EXTRACT Assembled Product Weight|#[0.25]|#null|#

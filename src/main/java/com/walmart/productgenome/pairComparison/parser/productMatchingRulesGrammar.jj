@@ -1,0 +1,155 @@
+/**
+ * Javacc parser generator file for generating parser to parse product matching rules.
+ */options{    JDK_VERSION = "1.5";    STATIC = false;    BUILD_PARSER = true;    IGNORE_CASE = false;}PARSER_BEGIN(ProductMatchingGrammar)package com.walmart.productgenome.pairComparison.parser;import java.io.*;import java.util.*;import com.google.common.collect.*;
+import org.apache.commons.collections.*;
+import com.walmart.productgenome.pairComparison.model.Constants;
+import com.walmart.productgenome.pairComparison.model.rule.*;public class ProductMatchingGrammar{    public static void main(String [] args) throws IOException    {        java.io.BufferedReader sr = new java.io.BufferedReader(new java.io.FileReader(args [0]));        ProductMatchingGrammar parser = new ProductMatchingGrammar(sr);        try        {            System.out.println("Started parsing ..");            ItemMatchRuleset productMatchingRuleset = parser.getProductMatchingRuleset();            System.out.println("Successfully finished parsing ..");            System.out.println("Product Matching Ruleset : " + productMatchingRuleset.toString());
+            System.out.println("Expanded rules : \n" + productMatchingRuleset.generateCompleteRules());        }        catch (ParseException pe) {            System.err.println("Failed parsing ..");            pe.printStackTrace();        }    }
+}PARSER_END(ProductMatchingGrammar)
+/*TOKEN_MGR_DECLS :{    public static void main(String [ ] args) throws IOException    {        java.io.BufferedReader sr = new java.io.BufferedReader(new java.io.FileReader(args [ 0 ]));        SimpleCharStream scs = new SimpleCharStream(sr);        ProductMatchingGrammarTokenManager mgr = new ProductMatchingGrammarTokenManager(scs);        Token t = mgr.getNextToken();        for (; t.kind != EOF; t = mgr.getNextToken())        {            debugStream.println("Found token:" + t.image + ", " + t.kind);        }    }}*/
+// -------------------- LEXICAL TOKENIZER GRAMMAR --------------------------------------------SKIP :{    " "|   "\r"|   "\t"|   "\n"}/* COMMENTS : http://babbage.clarku.edu/~fgreen/courses/cs230/examples/JavaCCGrammar/JavaCC.jj*/MORE :{    "//" : IN_SINGLE_LINE_COMMENT|   < "/**" ~[ "/" ] >    {        input_stream.backup(1);    }    : IN_FORMAL_COMMENT|   "/*" : IN_MULTI_LINE_COMMENT}< IN_SINGLE_LINE_COMMENT >SPECIAL_TOKEN :{    < SINGLE_LINE_COMMENT :        "\n"    |   "\r"    |   "\r\n" > : DEFAULT}< IN_FORMAL_COMMENT >SPECIAL_TOKEN :{    < FORMAL_COMMENT : "*/" > : DEFAULT}< IN_MULTI_LINE_COMMENT >SPECIAL_TOKEN :{    < MULTI_LINE_COMMENT : "*/" > : DEFAULT}< IN_SINGLE_LINE_COMMENT, IN_FORMAL_COMMENT, IN_MULTI_LINE_COMMENT >MORE :{    < ~[ ] >}/* Operators */TOKEN :{    < SEMICOLON : ";" >|   < COMMA : "," >|   < EQUALS : "=" >|   < OPENBRACKET : [ "[", "(", "{" ] >|   < CLOSEBRACKET : [ "]", ")", "}" ] >}TOKEN : /* DSL specific */{    /* Language constructs syntax specific*/    < CREATE : ("CREATE") >|   < INCLUDE :        (            "INCLUDE"        |   "INCLUDING"        ) >|   < VARIABLE : ("VARIABLE") >|   < AS : ("AS") >|   < END : ("END") >|   < SUBRULE : ("SUBRULE") >|   < USING : ("USING") >|   < AND : ("AND") >|   < OR : ("OR") >|   < IN : ("IN") >|   < VARIABLE_IDENTIFIER : ("#") >    /* Product matching domain specific */|   < RULE : ("RULE") >|   < RULESET : ("RULESET") >|   < RULESET_ATTRIBUTES : ("DEFAULT_RULESET_ATTRIBUTES") >|   < COMPARER : ("COMPARER") >|   < SOURCE_TOKENIZER : ("SOURCE_TOKENIZER") >|   < TARGET_TOKENIZER : ("TARGET_TOKENIZER") >|   < CONTAINMENT_EVALUATOR : ("EVALUATOR") >|   < MISSING_ATTRIBUTE_ALLOWED : ("MISSING_ATTRIBUTE_ALLOWED") >|   < SCORE_THRESHOLD : ("SCORE") >|   < CLAUSE_ATTR_MATCH : ("MATCH") >
+|   < BIDIRECTIONAL_MATCH : ("BIDIRECTIONAL") >
+|   < UNIDIRECTIONAL_MATCH : ("UNIDIRECTIONAL") >}/* Literals */TOKEN :{	< STRING_LITERAL :        (            [ "a"-"z" ]        |   [ "A"-"Z" ]        |   "_"        |   "-"        |   [ "0"-"9" ]        )+ >|   < DECIMAL_FLOATING_POINT_LITERAL : ([ "0"-"9" ])+ (".")? ([ "0"-"9" ])* >
+//|   < QUOTED_STRING_LITERAL : "\"" (~[ "\"", "\\", "\n", "\r" ])+ "\"" >
+}// -------------------- PARSER GRAMMAR --------------------------------------------/* Get the ruleset for this grammar*/ItemMatchRuleset getProductMatchingRuleset() :{    String rulesetName = null;    Map < String, String > rulesetVarsMap = null;    Map < String, String > rulesetMetaInfoMap = null;    Map < String, String > rulesetMetaDefaultsMap = null;    Map < String, AttributeMatchClause > commonAttrMatchClausesMap = Maps.newHashMap();    List <ItemMatchRule> definedRules = Lists.newArrayList();    List < String > includedRuleNames = Lists.newArrayList();}{    /*
+		Lookahead(2) checks two tokens instead of just one to make a parsing decision. This is
+		done to avoid a kind of parsing error called choice confict. This error happens because the
+		starting token for all the three expansions below is same and the parser is conflicted
+		which expansion to proceed with. To make this decision easier, we give a hint to parser to
+		base the decision on two tokens instead of just one.
+	*/
+    // Get the metadata for this ruleset
+    (        rulesetMetaDefaultsMap = getRulesetMetaAttributes()    )
+        // Get the declared attribute set variables for this ruleset.
+    (        rulesetVarsMap = getRulesetVariables()    )
+	// Get the declared common clauses for this ruleset.
+    (        commonAttrMatchClausesMap = getRulesetCommonClausesMap(rulesetVarsMap, rulesetMetaDefaultsMap)    )
+        // Get the declared rules for this ruleset
+    (        definedRules = getRules(rulesetVarsMap, commonAttrMatchClausesMap, rulesetMetaDefaultsMap)    )
+    // Get the basic ruleset along with include rules
+    (        < CREATE > < RULESET > < STRING_LITERAL >        {            rulesetName = token.image;        }        <AS> includedRuleNames = getIncludedRulesInRuleset(definedRules) < END > < EOF >    )
+        // Build the actual ruleset here
+    {
+        // Only retain the rules that have been included in the ruleset
+        List<ItemMatchRule> finalRules = Lists.newArrayList();
+        for(ItemMatchRule rule : definedRules)        {			if(includedRuleNames.contains(rule.getRuleName()))			{				finalRules.add(rule);
+			}
+        }
+                return new ItemMatchRuleset(rulesetName, finalRules);    }}/* Parse the variables defined for this grammar. These would be replaced inline. */Map < String, String > getRulesetVariables() :{    Map < String, String > rulesetVarsMap = Maps.newHashMap();    String varName = null;    StringBuilder varValue = null;}{    (        LOOKAHEAD(2)        < CREATE > (< VARIABLE >) < STRING_LITERAL >        {            varName = token.image;
+            varValue = new StringBuilder();        }        < AS >
+        (
+            < STRING_LITERAL >            {
+                varValue.append(token.image);            }
+            (< COMMA > | < OR >)?
+            {
+                if(token.image.equals(","))
+                {
+                    varValue.append(",");                }
+                else if(token.image.equals("OR"))
+                {
+                    varValue.append("OR");                }            }        )+
+		< SEMICOLON >        {
+            rulesetVarsMap.put(varName, varValue.toString());        }    )*    {        return rulesetVarsMap;    }}/*
+	Parse the common attribute match clauses here. 
+*/Map < String, AttributeMatchClause > getRulesetCommonClausesMap(Map < String, String > rulesetVarsMap, Map<String, String > rulesetMetaDefaultsMap) :{    Map < String, AttributeMatchClause > rulesetCommonClausesMap = Maps.newHashMap();    String filterClauseName = null;    AttributeMatchClause commonAttrMatchClause = null;}{    (        LOOKAHEAD(2)        < CREATE > < SUBRULE > < STRING_LITERAL >        {            filterClauseName = token.image;        }        < AS > commonAttrMatchClause = getAttributeMatchClause(rulesetVarsMap, rulesetMetaDefaultsMap)        {            rulesetCommonClausesMap.put(filterClauseName, commonAttrMatchClause);        }    )*    {        return rulesetCommonClausesMap;    }}/* Parse the ruleset attributes for this grammar */Map<String, String > getRulesetMetaAttributes() :{    Map<String, String > rulesetMetaMap = null;}{    (        LOOKAHEAD(2)        < CREATE > < RULESET_ATTRIBUTES > < AS > rulesetMetaMap = getAttributeMatchClauseMeta() < END >    )?    {        return rulesetMetaMap;    }}/*
+	Parses the meta information for the attribute match clause
+*/Map<String, String > getAttributeMatchClauseMeta() :{    Map < String, String > clauseMetaMap = Maps.newHashMap();    String matcherKey = null;    String matcherValue = null;}{    (        matcherKey = parseMatcherMetaKey()        < EQUALS > matcherValue = parseMatcherMetaValue()        (            < SEMICOLON >        |   < AND >        )        {            clauseMetaMap.put(matcherKey, matcherValue);        }    )+    {        return clauseMetaMap;    }}/* Parses the matcher domain keywords */String parseMatcherMetaKey() :{}{    (        < COMPARER >    |   < SOURCE_TOKENIZER >    |   < TARGET_TOKENIZER >    |   < CONTAINMENT_EVALUATOR >    |   < MISSING_ATTRIBUTE_ALLOWED >    |   < SCORE_THRESHOLD >    )    {        return token.image;    }}/* Parses the matcher domain keyword values */String parseMatcherMetaValue() :{}{    (        < STRING_LITERAL >    |   < DECIMAL_FLOATING_POINT_LITERAL >    )    {        return token.image;    }}/* Parse the rules for this grammar */List < ItemMatchRule > getRules(Map < String, String > attrSetVarsMap, Map < String, AttributeMatchClause > commonAttrMatchClauses, Map<String, String > rulesetMetaDefaultsMap) :{    List < ItemMatchRule > rules = Lists.newArrayList();    List < AttributeMatchClause > ruleClauses = null;    List < AttributeMatchClause > rulesetCommonClausesInRule = null;    ItemMatchRule rule = null;    AttributeMatchClause ruleClause = null;    String ruleName = null;}{    (
+        LOOKAHEAD(2)        < CREATE > < RULE > < STRING_LITERAL >        {            ruleName = token.image;
+            ruleClauses = Lists.newArrayList();        }        < AS >
+		
+		// Parse the common included subrules in the rule
+		(		    
+	        < INCLUDE > < SUBRULE >
+	        < OPENBRACKET >
+		        rulesetCommonClausesInRule = getRulesetCommonClausesInRule(commonAttrMatchClauses)
+		        {
+		            if(CollectionUtils.isNotEmpty(rulesetCommonClausesInRule))
+		            {
+    		            ruleClauses.addAll(rulesetCommonClausesInRule);
+		            }
+		        }
+        	< CLOSEBRACKET >
+        	< SEMICOLON >
+    	)?
+
+    	// Parse the defined clauses in the rule                (            ruleClause = getAttributeMatchClause(attrSetVarsMap, rulesetMetaDefaultsMap)            {                ruleClauses.add(ruleClause);            }        )+        < END >
+
+        // Add the current parsed rule to the set of rules        {            rule = new ItemMatchRule(ruleName, ruleClauses);            rules.add(rule);
+        }    )+ // End of rule section
+
+    // Return the parsed rules from the rule section of ruleset file    {        return rules;    }}/* Parses the included common rule clauses in rule*/List < AttributeMatchClause > getRulesetCommonClausesInRule(Map < String, AttributeMatchClause > rulesetCommonClausesMap) :{    List < AttributeMatchClause > rulesetCommonClauses = Lists.newArrayList();    List < String > commonClauseNames = Lists.newArrayList();}{    (        < VARIABLE_IDENTIFIER > < STRING_LITERAL >        {            commonClauseNames.add(token.image);        }        (< COMMA >)?    )+    {        for (String commonClauseName : commonClauseNames)        {            rulesetCommonClauses.add(rulesetCommonClausesMap.get(commonClauseName));        }        return rulesetCommonClauses;    }}/*
+	Parses the attribute match clause.
+*/AttributeMatchClause getAttributeMatchClause(Map < String, String > rulesetVarsMap, Map<String, String > rulesetMetaDefaultsMap) :{    AttributeMatchClause attrMatchClause = null;    List < String > sourceAttrs = null;    List < String > targetAttrs = null;
+
+    Map<String, String > attrMatchClauseMetaMap = null;    AttributeMatchClauseMeta attrMatchClauseMeta = null;
+
+    Boolean isBidirectionalMatch = false;}{    (		(
+		      <BIDIRECTIONAL_MATCH>
+		    | <UNIDIRECTIONAL_MATCH>		)?
+		{			if (token.image == "BIDIRECTIONAL") {				isBidirectionalMatch = true;
+			}
+			else {				isBidirectionalMatch = false;
+			}
+		}
+        <CLAUSE_ATTR_MATCH>        {            sourceAttrs = null;            targetAttrs = null;        }        sourceAttrs = getSourceAttrs(rulesetVarsMap) < IN > targetAttrs = getTargetAttrs(rulesetVarsMap)
+        (            < USING > attrMatchClauseMetaMap = getAttributeMatchClauseMeta()            {				// Merge clause attr meta with ruleset defaults, in case of missing entries
+				for(Map.Entry<String, String> entry : rulesetMetaDefaultsMap.entrySet())				{					String metaKey = entry.getKey().trim();
+					String metaValue = entry.getValue().trim();
+					if(!attrMatchClauseMetaMap.containsKey(metaKey))					{						attrMatchClauseMetaMap.put(metaKey, metaValue);
+					}
+					else if(metaKey.equals(Constants.SOURCE_TOKENIZER))					{
+					 	// Put a special condition check for target tokenizer here
+						attrMatchClauseMetaMap.put(Constants.TARGET_TOKENIZER, attrMatchClauseMetaMap.get(Constants.SOURCE_TOKENIZER));   					}
+				}
+
+				// If match direction is explicitly specified, override the default match direction.
+				if(isBidirectionalMatch)				{					attrMatchClauseMetaMap.put(Constants.CLAUSE_EVALUATOR, Constants.TWO_WAY_EVALUATOR);
+				}
+				else				{					attrMatchClauseMetaMap.put(Constants.CLAUSE_EVALUATOR, Constants.ONE_WAY_EVALUATOR);  
+				}
+            }        )?    )    {		if(attrMatchClauseMetaMap != null)		{			attrMatchClauseMeta = new AttributeMatchClauseMeta(attrMatchClauseMetaMap);
+		}
+		// if no metadata has been defined for the clause, it inherits the default ruleset metadata.
+		else		{
+			attrMatchClauseMeta = new AttributeMatchClauseMeta(rulesetMetaDefaultsMap);
+		}
+
+        attrMatchClause = new AttributeMatchClause(sourceAttrs, targetAttrs, attrMatchClauseMeta);        return attrMatchClause;    }}/* Gets the source attributes defined in the rule clause.*/List < String > getSourceAttrs(Map < String, String > attrSetVarsMap) :{    List < String > srcAttrs = Lists.newArrayList();
+    boolean isAttrSetVarDefined = false;}{	< OPENBRACKET >
+    (        (< VARIABLE_IDENTIFIER >)?
+        {
+            // Hack. How to handle ()? because if this doesn't match, it uses last token value
+            if (token.image == "#")
+            {
+                isAttrSetVarDefined = true;
+            }
+        }
+        < STRING_LITERAL >
+        {
+            // Hack : TODO inline replacement of defined attribute set variables.
+            if (isAttrSetVarDefined)
+            {
+                String srcAttrSetString = attrSetVarsMap.get(token.image);
+                String[] srcAttrSet = srcAttrSetString.split("OR");
+                for(String srcAttr : srcAttrSet)                {
+                    srcAttrs.add(srcAttr.trim());                }
+            }
+            else
+            {
+                srcAttrs.add(token.image);
+            }
+            isAttrSetVarDefined = false;
+        }
+        (< OR >)?    )+
+    < CLOSEBRACKET >    {        return srcAttrs;    }}/* Gets the destination attributes defined in the rule clause. */List < String > getTargetAttrs(Map < String, String > attrSetVarsMap) :{    List < String > targetAttrs = Lists.newArrayList();    StringBuilder sb = new StringBuilder();    boolean isAttrSetVarDefined = false;}{    < OPENBRACKET >    (        (< VARIABLE_IDENTIFIER >)?        {            // Hack. How to handle ()? because if this doesn't match, it uses last token value
+            if (token.image == "#")            {                isAttrSetVarDefined = true;            }        }        < STRING_LITERAL >        {            // Hack : TODO inline replacement of defined attribute set variables.
+            if (isAttrSetVarDefined)            {                sb.append(attrSetVarsMap.get(token.image));            }            else            {                sb.append(token.image);            }            isAttrSetVarDefined = false;        }        (< COMMA >)?        {            // TODO : Fix this hack. How to handle ()?
+            if (token.image == ",")            {                sb.append(token.image);            }        }    )+    < CLOSEBRACKET >    {        String [ ] targetAttrsExpandedList = sb.toString().split(",");        for (String targetAttr : targetAttrsExpandedList)        {            targetAttrs.add(targetAttr);        }        return targetAttrs;    }}/*
+	Parse the included rules in ruleset declaration.
+	Do a validation check to ensure that the rules included in the ruleset are defined, else
+	throw an exception.
+*/List <String> getIncludedRulesInRuleset(List <ItemMatchRule> definedRules) :{    List < String > rulesToInclude = Lists.newArrayList();    String ruleName = null;}{    (        < INCLUDE > < RULE >
+        < STRING_LITERAL >        {            ruleName = token.image;        }        < SEMICOLON >        {            rulesToInclude.add(ruleName);        }    )+    {        // Hack : TODO how can I move this validation to outside the grammar code but just before
+        // returning the ruleset to the caller function.
+        boolean areAllIncludedRulesDefined = true;        List <String> undefinedRules = Lists.newArrayList();        for (String includedRuleName : rulesToInclude)        {            boolean isCurrIncludedRuleDefined = false;            for (ItemMatchRule rule : definedRules)            {                if (rule.getRuleName().equals(includedRuleName))                {                    isCurrIncludedRuleDefined = true;                    break;                }            }            if (!isCurrIncludedRuleDefined)            {                areAllIncludedRulesDefined = false;                undefinedRules.add(includedRuleName);            }        }        if (!areAllIncludedRulesDefined)        {            throw new ParseException("Following rules have been included but not defined in the grammar " + undefinedRules.toString());        }
+                return rulesToInclude;    }}
