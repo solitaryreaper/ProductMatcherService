@@ -17,6 +17,7 @@ import com.walmart.productgenome.pairComparison.utils.comparers.stringComparers.
 import com.walmart.productgenome.pairComparison.utils.comparers.stringComparers.ExactComparer;
 import com.walmart.productgenome.pairComparison.utils.comparers.stringComparers.LevenshteinDistanceBasedComparer;
 import com.walmart.productgenome.pairComparison.utils.comparers.stringComparers.PrefixBasedComparer;
+import com.walmart.productgenome.pairComparison.utils.comparers.stringComparers.QGramsDistanceComparer;
 import com.walmart.productgenome.pairComparison.utils.comparers.stringComparers.StemmedComparer;
 import com.walmart.productgenome.pairComparison.utils.comparers.stringComparers.SuffixBasedComparer;
 import com.walmart.productgenome.pairComparison.utils.comparers.stringComparers.WalmartSpecificBrandsComparer;
@@ -31,6 +32,8 @@ public class ComparersFactory {
 	private static final IComparer CONSONANTS_ONLY_STRING = new ConsonantsOnlyComparer();
 	private static final IComparer DOMAIN_SPECIFIC_KEYWORDS = new DomainSpecificComparer();
 	private static final IComparer WALMART_BRANDS_ONLY = new WalmartSpecificBrandsComparer();
+	private static final IComparer EDIT_DISTANCE = new LevenshteinDistanceBasedComparer();
+	private static final IComparer QGRAMS_DISTANCE = new QGramsDistanceComparer();
 	
 	//Available Integer comparers
 	private static final IComparer EXACT_INTEGER = new ExactNumericComparer();
@@ -55,6 +58,8 @@ public class ComparersFactory {
 				CONSONANTS_ONLY_STRING, INT2ENGLISH, DOMAIN_SPECIFIC_KEYWORDS, WALMART_BRANDS_ONLY);
 	private static final List<IComparer> EXACT_STRING_COMPARERS = 
 		Lists.newArrayList(EXACT_STRING);
+	public static final List<IComparer> MATCH_COMPARERS = 
+		Lists.newArrayList(EXACT_STRING, EDIT_DISTANCE, QGRAMS_DISTANCE);
 	
 	// -------------- Integer comparers logical grouping ------------------------------
 	private static final List<IComparer> INTEGER_COMPARERS = 
@@ -168,5 +173,17 @@ public class ComparersFactory {
 		comparersMap.put(IntToEnglishWordComparer.class.getSimpleName(), "INT_TO_ENGLISH_COMPARER");
 		
 		return comparersMap.get(comparerClassName);
+	}
+	
+	// Returns a short name for the comparer
+	public static String getComparerAbbrvName(String comparerClassName)
+	{
+		Map<String, String> comparersAbbrMap = Maps.newHashMap();
+		comparersAbbrMap.put(ExactComparer.class.getSimpleName(), "exact");
+		comparersAbbrMap.put(QGramsDistanceComparer.class.getSimpleName(), "qg3");
+		comparersAbbrMap.put(LevenshteinDistanceBasedComparer.class.getSimpleName(), "lev");
+		comparersAbbrMap.put(ExactNumericComparer.class.getSimpleName(), "num");
+		
+		return comparersAbbrMap.get(comparerClassName);
 	}
 }

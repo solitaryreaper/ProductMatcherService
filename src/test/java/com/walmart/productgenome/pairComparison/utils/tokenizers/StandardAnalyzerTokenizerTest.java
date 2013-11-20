@@ -86,4 +86,5 @@ public class StandardAnalyzerTokenizerTest{
 		assertEquals("caller", tokens.get(7));
 		assertEquals("id", tokens.get(8));
 	}
+	
 }
